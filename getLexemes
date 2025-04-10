@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+
+from sys import argv, stdin
+from json import load, dump
+from os import path
+
+from requests import request as request
+
+
+CACHE = "cache.json"
+
+
+def main(identity, to, _from, _stdin):
+  endpoint = "https://www.duolingo.com/2017-06-30/users/" + identity
+
+  lines = iter(_stdin)
+  next(lines)
+  headers = dict(map(lambda header: header.strip().split(": ", 1), lines))
+
+  with Cache(CACHE) as cache:
+    pass
+
+
+class Cache:
+  def __init__(self, _path):
+    self.path = _path
+
+  def __enter__(self):
+    if path.exists(self.path):
+      with open(self.path) as file:
+        self.cache = load(file)
+    else:
+      self.cache = dict()
+
+  def __exit__(self, *extra):
+    with open(self.path, "w") as file:
+      dump(self.cache, file)
+
+
+if __name__ == '__main__': main(*argv[1:], stdin)
