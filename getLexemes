@@ -1,29 +1,31 @@
 #!/usr/bin/env python3
 
 from sys import argv, stdin
-from json import load, dump
+from json import load, dump, dumps
 from os import path
+from hashlib import md5
 
-from requests import request as request
+from requests import get
 
 
 CACHE = "cache.json"
 
 
-def main(identity, to, _from, _stdin):
+def main(identity, nonce, _stdin):
   endpoint = "https://www.duolingo.com/2017-06-30/users/" + identity
 
   lines = iter(_stdin)
   next(lines)
   headers = dict(map(lambda header: header.strip().split(": ", 1), lines))
+  del headers['Content-Length']
 
-  with Cache(CACHE) as cache:
-    pass
-
+  with Cache(CACHE, headers) as cache:
+    cache.request(endpoint, dict(fields = 'currentCourse', _ = nonce))
 
 class Cache:
-  def __init__(self, _path):
+  def __init__(self, _path, headers):
     self.path = _path
+    self.headers = headers
 
   def __enter__(self):
     if path.exists(self.path):
@@ -32,9 +34,22 @@ class Cache:
     else:
       self.cache = dict()
 
+    return self
+
   def __exit__(self, *extra):
     with open(self.path, "w") as file:
       dump(self.cache, file)
+
+  def request(self, URL, query):
+    hashSum = md5(
+      dumps(dict(URL = URL, query = query), sort_keys = True).encode()
+    ).hexdigest()
+    if hashSum in self.cache:
+      response = self.cache[hashSum]
+    else:
+      response = get(URL, params = query, headers = self.headers).json()
+      self.cache[hashSum] = response
+    return response
 
 
 if __name__ == '__main__': main(*argv[1:], stdin)
