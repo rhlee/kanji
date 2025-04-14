@@ -20,7 +20,13 @@ def main(identity, nonce, _stdin):
   del headers['Content-Length']
 
   with Cache(CACHE, headers) as cache:
-    cache.request(endpoint, dict(fields = 'currentCourse', _ = nonce))
+    response \
+      = cache.request(endpoint, dict(fields = 'currentCourse', _ = nonce))
+    for indexSection, section \
+      in enumerate(response['currentCourse']['pathSectioned'])\
+    :
+      for indexUnit, unit in enumerate(section['units']):
+        print(indexSection, indexUnit)
 
 class Cache:
   def __init__(self, _path, headers):
@@ -33,7 +39,6 @@ class Cache:
         self.cache = load(file)
     else:
       self.cache = dict()
-
     return self
 
   def __exit__(self, *extra):
