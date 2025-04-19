@@ -22,11 +22,19 @@ def main(identity, nonce, _stdin):
   with Cache(CACHE, headers) as cache:
     response \
       = cache.request(endpoint, dict(fields = 'currentCourse', _ = nonce))
-    for indexSection, section \
-      in enumerate(response['currentCourse']['pathSectioned'])\
-    :
-      for indexUnit, unit in enumerate(section['units']):
-        print(indexSection, indexUnit)
+    for section in response['currentCourse']['pathSectioned'][:-1]:
+      for index, unit in enumerate(section['units']):
+        print(
+          index + 1,
+          unit['teachingObjective'],
+          (
+            {
+              level['pathLevelMetadata'].get('skillId')
+                for level in unit['levels']
+            }
+            - {None}
+          ).pop()
+        )
 
 class Cache:
   def __init__(self, _path, headers):
