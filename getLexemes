@@ -27,13 +27,13 @@ def main(identity, nonce, _stdin):
         print(
           index + 1,
           unit['teachingObjective'],
-          (
-            {
-              level['pathLevelMetadata'].get('skillId')
-                for level in unit['levels']
-            }
-            - {None}
-          ).pop()
+          next(filter(
+            lambda skill: skill,
+            map(
+              lambda level: level['pathLevelMetadata'].get('skillId'),
+              unit['levels']
+            )
+          ))
         )
 
 class Cache:
