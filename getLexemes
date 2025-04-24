@@ -5,10 +5,11 @@ from json import load, dump, dumps
 from os import path
 from hashlib import md5
 
-from requests import get
+from requests import request
 
 
 CACHE = "cache.json"
+MAXIMUM = 2 ** 8 - 1
 
 
 def main(identity, nonce, _stdin):
@@ -20,21 +21,33 @@ def main(identity, nonce, _stdin):
   del headers['Content-Length']
 
   with Cache(CACHE, headers) as cache:
-    response \
-      = cache.request(endpoint, dict(fields = 'currentCourse', _ = nonce))
-    for section in response['currentCourse']['pathSectioned'][:-1]:
+    course = cache\
+      .get(endpoint, params = dict(fields = 'currentCourse', _ = nonce))\
+        ['currentCourse']
+    tracking = course['trackingProperties']
+    for section in course['pathSectioned'][:-1]:
       for index, unit in enumerate(section['units']):
-        print(
-          index + 1,
-          unit['teachingObjective'],
-          next(filter(
-            lambda skill: skill,
-            map(
-              lambda level: level['pathLevelMetadata'].get('skillId'),
-              unit['levels']
-            )
-          ))
+        lexemes = cache.post(
+          "/".join([
+            endpoint,
+            'courses',
+            tracking['learning_language'],
+            tracking['ui_language'],
+            'learned-lexemes'
+          ]),
+          json = dict(progressedSkills = [dict(
+            finishedLevels = MAXIMUM,
+            finishedSessions = MAXIMUM,
+            skillId = dict(id = next(filter(
+              lambda skill: skill,
+              map(
+                lambda level: level['pathLevelMetadata'].get('skillId'),
+                unit['levels']
+              )
+            )))
+          )])
         )
+        print(lexemes)
 
 class Cache:
   def __init__(self, _path, headers):
@@ -53,16 +66,24 @@ class Cache:
     with open(self.path, "w") as file:
       dump(self.cache, file)
 
-  def request(self, URL, query):
+  def request(self, method, URL, **keywords):
     hashSum = md5(
-      dumps(dict(URL = URL, query = query), sort_keys = True).encode()
+      dumps(dict(method = method, URL = URL, **keywords), sort_keys = True)
+        .encode()
     ).hexdigest()
     if hashSum in self.cache:
       response = self.cache[hashSum]
     else:
-      response = get(URL, params = query, headers = self.headers).json()
+      r = request(method, URL, headers = self.headers, **keywords)
+      print(r)
+      response \
+        = r.json()
       self.cache[hashSum] = response
     return response
+
+  def get(self, URL, **keywords): return self.request('GET', URL, **keywords)
+
+  def post(self, URL, **keywords): return self.request('POST', URL, **keywords)
 
 
 if __name__ == '__main__': main(*argv[1:], stdin)
