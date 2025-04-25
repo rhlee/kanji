@@ -47,7 +47,7 @@ def main(identity, nonce, _stdin):
             )))
           )])
         )
-        print(lexemes)
+        for lexeme in lexemes['learnedLexemes']: print(lexeme['text'])
 
 class Cache:
   def __init__(self, _path, headers):
