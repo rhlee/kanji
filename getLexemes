@@ -25,9 +25,13 @@ def main(identity, nonce, _stdin):
       .get(endpoint, params = dict(fields = 'currentCourse', _ = nonce))\
         ['currentCourse']
     tracking = course['trackingProperties']
+    sections = list()
+    encountered = set()
     for section in course['pathSectioned'][:-1]:
-      for index, unit in enumerate(section['units']):
-        lexemes = cache.post(
+      units = list()
+      for unitAPI in section['units']:
+        unit = list()
+        for lexeme in cache.post(
           "/".join([
             endpoint,
             'courses',
@@ -42,12 +46,19 @@ def main(identity, nonce, _stdin):
               lambda skill: skill,
               map(
                 lambda level: level['pathLevelMetadata'].get('skillId'),
-                unit['levels']
+                unitAPI['levels']
               )
             )))
           )])
-        )
-        for lexeme in lexemes['learnedLexemes']: print(lexeme['text'])
+        )['learnedLexemes']:
+          text = lexeme['text']
+          if text not in encountered:
+            unit.append(text)
+            encountered.add(text)
+        units.append(unit)
+      sections.append(units)
+  print(dumps(sections))
+
 
 class Cache:
   def __init__(self, _path, headers):
