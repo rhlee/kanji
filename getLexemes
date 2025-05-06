@@ -84,12 +84,8 @@ class Cache:
     ).hexdigest()
     if hashSum in self.cache:
       response = self.cache[hashSum]
-    else:
-      r = request(method, URL, headers = self.headers, **keywords)
-      print(r)
-      response \
-        = r.json()
-      self.cache[hashSum] = response
+    else: self.cache[hashSum] \
+      = request(method, URL, headers = self.headers, **keywords).json()
     return response
 
   def get(self, URL, **keywords): return self.request('GET', URL, **keywords)
