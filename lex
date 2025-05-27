@@ -181,7 +181,7 @@ def write(sectionUpTo, unitUpTo):
       kanjiUnit = []
       for _lexeme in sections[section][unit].keys():
         if details := lexemes.get(_lexeme):
-          lexeme = details['override'] or _lexeme
+          lexeme = details.get('override', _lexeme)
           readingsKanji = details['readings']
           used = set(filter(lambda character: character in kanjiKeys, lexeme))
           assert used == set(readingsKanji.keys())
