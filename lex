@@ -240,7 +240,7 @@ def write(sectionUpTo, unitUpTo):
             )
             + f" where code = {ord(kanji)};"
           )
-        cumulative += 1
+      cumulative += 1
 
 
 class Cache:
