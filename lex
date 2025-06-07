@@ -220,27 +220,27 @@ def write(sectionUpTo, unitUpTo):
               display_stroke_paths = "{chosen['stroke_paths']}"
             where id = {group};
         """)
-        with Queue(content) as queueContent:
-          for kanji, readingsKanji in readings.items(): queueContent(
-            "update kanji set "
-            + ", ".join(
-              f"custom_{typeReading}_reading = "
-              + (
-                (
-                  "\""
-                  + ",".join(
-                    ("" if details['used'] else "*")
-                    + reading
-                    + ("!" if details['important'] else "")
-                      for reading, details in readingsType.items()
-                  )
-                  + "\""
-                ) if readingsType else "null"
-              ) for typeReading, readingsType in readingsKanji.items()
-            )
-            + f" where code = {ord(kanji)};"
-          )
       cumulative += 1
+  with Queue(content) as queueContent:
+    for kanji, readingsKanji in readings.items(): queueContent(
+      "update kanji set "
+      + ", ".join(
+        f"custom_{typeReading}_reading = "
+        + (
+          (
+            "\""
+            + ",".join(
+              ("" if details['used'] else "*")
+              + reading
+              + ("!" if details['important'] else "")
+                for reading, details in readingsType.items()
+            )
+            + "\""
+          ) if readingsType else "null"
+        ) for typeReading, readingsType in readingsKanji.items()
+      )
+      + f" where code = {ord(kanji)};"
+    )
 
 
 class Cache:
