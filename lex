@@ -23,6 +23,7 @@ APPLICATION = "application.db"
 CONTENT = "content.db"
 PATH = f"/data/data/{IDENTIFIER_APPLICATION}/databases/"
 READINGS = ("kun", "on")
+QUOTE = {ord("\""): Exception}
 
 
 def get(identity, nonce, _stdin):
@@ -138,6 +139,12 @@ def write(sectionUpTo, unitUpTo):
 
   with Cache(CACHE) as cache:
     sections = cache.retrieve('sections')
+  translations = {
+    lexeme: ", ".join(_translations)
+      for units in sections
+        for unit in units
+          for lexeme, _translations in unit.items()
+  }
   content = Database(user, PATH + CONTENT)
   kanjiDict = {
     chr(kanji['code']):
@@ -153,6 +160,7 @@ def write(sectionUpTo, unitUpTo):
     = defaultdict(lambda: {typeReading: dict() for typeReading in READINGS})
   markings = {ord(character): None for character in ("*", "!")}
   now = int(time() * 1000)
+  translationsCollated = defaultdict(list)
   for section, _unitUpTo in enumerate(counts):
     grouping = application.insertWithIdentity(
       "insert into groupings "
@@ -212,6 +220,8 @@ def write(sectionUpTo, unitUpTo):
               typeReading = READINGS[int(readingCustom[0] >= 'ァ')]
               readingsType = readings[kanji][typeReading]
               readingsType[readingCustom]['used'] = True
+              if len(lexeme) > 1: translationsCollated[kanji].append\
+                (lexeme.replace(kanji, "〇") + " " + translations[_lexeme])
         chosen = kanjiDict[choice(kanjiUnit)]
         queueApplication(f"""
           update groups
@@ -241,6 +251,21 @@ def write(sectionUpTo, unitUpTo):
       )
       + f" where code = {ord(kanji)};"
     )
+  codes = {
+    row['code'] for row in application.execute("select code from user_info;")
+  }
+  with Queue(application) as queueApplication:
+    for kanji, translationsKanji in translationsCollated.items():
+      ordinal = ord(kanji)
+      notes = "; ".join(translationsKanji).translate(QUOTE)
+      queueApplication(
+        f"""update user_info set notes = "{notes}" where code = {ordinal};"""
+          if ordinal in codes else
+            f"""
+              insert into user_info (code, notes) values(ordinal, "{notes}");
+            """
+      )
+
 
 
 class Cache:
@@ -314,13 +339,12 @@ def loadOrDict(_path):
   else: contents = dict()
   return contents
 
-quote = {ord("\""): Exception}
 SQLmap = lambda **keywords: \
   "(" \
-    + ", ".join(map(lambda key: key.translate(quote), keywords.keys())) \
+    + ", ".join(map(lambda key: key.translate(QUOTE), keywords.keys())) \
   + ") " \
   + "values(" + ", ".join(map(
-    lambda value: f"\"{value.translate(quote)}\""
+    lambda value: f"\"{value.translate(QUOTE)}\""
       if type(value) is str else str(value),
     keywords.values()
   )) + ")"
