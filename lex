@@ -270,7 +270,6 @@ def write(sectionUpTo, unitUpTo):
       )
 
 
-
 class Cache:
   def __init__(self, _path, headers = None):
     self.path = _path
