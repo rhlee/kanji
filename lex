@@ -82,7 +82,7 @@ def lex(sectionIndex, unitIndex):
     :
       lexeme = lexemes.get(word, dict(override = None, readings = dict()))
       if 'override' not in lexeme: lexeme['override'] = None
-      if 'translation' not in lexeme: lexeme['translation'] = None
+      if 'vocabulary' not in lexeme: lexeme['vocabulary'] = None
       lexeme['translations'] = "; ".join(translations)
       unitIn[word] = lexeme
   try:
@@ -106,11 +106,11 @@ def lex(sectionIndex, unitIndex):
   for word, details in unitOut.items():
     readingsDetails = details['readings']
     override = details['override']
-    translation = details['translation']
+    vocabulary = details['vocabulary']
     if len(readingsDetails): lexemes[word] = dict(
       **dict(readings = readingsDetails),
       **dict(override = override) if override else dict(),
-      **dict(translation = translation) if translation else dict()
+      **dict(vocabulary = vocabulary) if vocabulary else dict()
     )
     else:
       if details['override']: raise Exception
