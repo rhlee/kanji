@@ -265,7 +265,7 @@ def write(sectionUpTo, unitUpTo):
         f"""update user_info set notes = "{notes}" where code = {ordinal};"""
           if ordinal in codes else
             f"""
-              insert into user_info (code, notes) values(ordinal, "{notes}");
+              insert into user_info (code, notes) values({ordinal}, "{notes}");
             """
       )
 
