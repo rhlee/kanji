@@ -138,6 +138,7 @@ def write(sectionUpTo, unitUpTo):
     delete from groups where grouping_id is not null;
     delete from groups_link where group_id not in (select id from groups);
     delete from kanji_override;
+    delete from favorite_vocab;
   """)
 
   with Cache(CACHE) as cache:
@@ -164,6 +165,7 @@ def write(sectionUpTo, unitUpTo):
   markings = {ord(character): None for character in ("*", "!")}
   now = int(time() * 1000)
   translationsCollated = defaultdict(list)
+  vocabulary = set()
   for section, _unitUpTo in enumerate(counts):
     grouping = application.insertWithIdentity(
       "insert into groupings "
@@ -225,6 +227,10 @@ def write(sectionUpTo, unitUpTo):
               readingsType[readingCustom]['used'] = True
               if len(lexeme) > 1: translationsCollated[kanji].append\
                 (lexeme.replace(kanji, "〇") + " " + translations[_lexeme])
+            if vocabularyKanji := details.get('vocabulary'):
+              if type(vocabularyKanji) is list:
+                vocabulary.union(vocabularyKanji)
+              else: vocabulary.add(vocabularyKanji)
         chosen = kanjiDict[choice(kanjiUnit)]
         queueApplication(f"""
           update groups
@@ -268,6 +274,11 @@ def write(sectionUpTo, unitUpTo):
               insert into user_info (code, notes) values({ordinal}, "{notes}");
             """
       )
+    for vocabularySingle in vocabulary: queueApplication(
+      f"""insert
+        into favorite_vocab (vocab_id, timestamp)
+          values({vocabularySingle}, {now});"""
+    )
 
 
 class Cache:
