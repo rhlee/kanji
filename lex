@@ -24,6 +24,7 @@ CONTENT = "content.db"
 PATH = f"/data/data/{IDENTIFIER_APPLICATION}/databases/"
 READINGS = ("kun", "on")
 QUOTE = {ord("\""): Exception}
+WARNING = "\u26a0\ufe0f"
 
 
 def get(identity, nonce, _stdin):
@@ -166,6 +167,7 @@ def write(sectionUpTo, unitUpTo):
   now = int(time() * 1000)
   translationsCollated = defaultdict(list)
   vocabulary = set()
+  jukujikun = set()
   for section, _unitUpTo in enumerate(counts):
     grouping = application.insertWithIdentity(
       "insert into groupings "
@@ -222,9 +224,12 @@ def write(sectionUpTo, unitUpTo):
                   + ";"
                 )
               readingCustom = readingsKanji[kanji]
-              typeReading = READINGS[int(readingCustom[0] >= 'ァ')]
-              readingsType = readings[kanji][typeReading]
-              readingsType[readingCustom]['used'] = True
+              if readingCustom:
+                typeReading = READINGS[int(readingCustom[0] >= 'ァ')]
+                readingsType = readings[kanji][typeReading]
+                readingsType[readingCustom]['used'] = True
+              else:
+                jukujikun.add(kanji)
               if len(lexeme) > 1: translationsCollated[kanji].append\
                 (lexeme.replace(kanji, "〇") + " " + translations[_lexeme])
             if vocabularyKanji := details.get('vocabulary'):
@@ -241,24 +246,34 @@ def write(sectionUpTo, unitUpTo):
         """)
       cumulative += 1
   with Queue(content) as queueContent:
-    for kanji, readingsKanji in readings.items(): queueContent(
-      "update kanji set "
-      + ", ".join(
-        f"custom_{typeReading}_reading = "
-        + (
-          (
-            "\""
-            + ",".join(
-              ("" if details['used'] else "*")
-              + reading
-              + ("!" if details['important'] else "")
-                for reading, details in readingsType.items()
-            )
-            + "\""
-          ) if readingsType else "null"
-        ) for typeReading, readingsType in readingsKanji.items()
+    for kanji, readingsKanji in readings.items():
+      queueContent(
+        "update kanji set "
+        + ", ".join(
+          f"custom_{typeReading}_reading = "
+          + (
+            (
+              "\""
+              + ",".join(
+                ("" if details['used'] else "*")
+                + reading
+                + ("!" if details['important'] else "")
+                  for reading, details in readingsType.items()
+              )
+              + "\""
+            ) if readingsType else "null"
+          ) for typeReading, readingsType in readingsKanji.items()
+        )
+        + f" where code = {ord(kanji)};"
       )
-      + f" where code = {ord(kanji)};"
+    for kanji in jukujikun: queueContent(
+      f"""update kanji
+        set
+          kun_reading = null,
+          custom_kun_reading = null,
+          on_reading = "{WARNING}",
+          custom_on_reading = "{WARNING}"
+        where code = {ord(kanji)};"""
     )
   codes = {
     row['code'] for row in application.execute("select code from user_info;")
