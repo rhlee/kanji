@@ -25,6 +25,7 @@ PATH = f"/data/data/{IDENTIFIER_APPLICATION}/databases/"
 READINGS = ("kun", "on")
 QUOTE = {ord("\""): Exception}
 WARNING = "\u26a0\ufe0f"
+REMOVAL = ('draw_record', 'memorize_info', 'user_info', 'memorize_audit')
 
 
 def get(identity, nonce, _stdin):
@@ -293,6 +294,20 @@ def write(sectionUpTo, unitUpTo):
       f"""insert
         into favorite_vocab (vocab_id, timestamp)
           values({vocabularySingle}, {now});"""
+    )
+    guided = {
+      chr(information['code'])
+        for information
+          in application.execute("select code from memorize_info;")
+    }
+    both = set(readings.keys()) | jukujikun
+    for kanji in guided - both:
+      code = ord(kanji)
+      for table in REMOVAL:
+        queueApplication(f"delete from {table} where code = {code};")
+    for kanji in both - guided: queueApplication(
+      f"""insert into memorize_info
+        {SQLmap(code = ord(kanji), started_at = now)};"""
     )
 
 
