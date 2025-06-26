@@ -26,6 +26,16 @@ READINGS = ("kun", "on")
 QUOTE = {ord("\""): Exception}
 WARNING = "\u26a0\ufe0f"
 REMOVAL = ('draw_record', 'memorize_info', 'user_info', 'memorize_audit')
+FIELDS = (
+  'last_activated_at',
+  'review_interval',
+  'quiz_difficulty',
+  'draw_difficulty',
+  'repetition' ,
+  'quiz_count' ,
+  'draw_count' ,
+  'is_ignored'
+)
 
 
 def get(identity, nonce, _stdin):
@@ -307,7 +317,11 @@ def write(sectionUpTo, unitUpTo):
         queueApplication(f"delete from {table} where code = {code};")
     for kanji in both - guided: queueApplication(
       f"""insert into memorize_info
-        {SQLmap(code = ord(kanji), started_at = now)};"""
+        {SQLmap(
+          code = ord(kanji),
+          started_at = now,
+          **{field: 0 for field in FIELDS}
+        )};"""
     )
 
 
