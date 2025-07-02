@@ -176,7 +176,6 @@ def write(sectionUpTo, unitUpTo):
     = defaultdict(lambda: {typeReading: dict() for typeReading in READINGS})
   markings = {ord(character): None for character in ("*", "!")}
   now = int(time() * 1000)
-  translationsCollated = defaultdict(list)
   vocabulary = set()
   jukujikun = set()
   for section, _unitUpTo in enumerate(counts):
@@ -241,8 +240,6 @@ def write(sectionUpTo, unitUpTo):
                 readingsType[readingCustom]['used'] = True
               else:
                 jukujikun.add(kanji)
-              if len(lexeme) > 1: translationsCollated[kanji].append\
-                (lexeme.replace(kanji, "〇") + " " + translations[_lexeme])
             if vocabularyKanji := details.get('vocabulary'):
               if type(vocabularyKanji) is list:
                 vocabulary.union(vocabularyKanji)
@@ -286,20 +283,7 @@ def write(sectionUpTo, unitUpTo):
           custom_on_reading = "{WARNING}"
         where code = {ord(kanji)};"""
     )
-  codes = {
-    row['code'] for row in application.execute("select code from user_info;")
-  }
   with Queue(application) as queueApplication:
-    for kanji, translationsKanji in translationsCollated.items():
-      ordinal = ord(kanji)
-      notes = "; ".join(translationsKanji).translate(QUOTE)
-      queueApplication(
-        f"""update user_info set notes = "{notes}" where code = {ordinal};"""
-          if ordinal in codes else
-            f"""
-              insert into user_info {SQLmap(code = ordinal, notes = notes)};
-            """
-      )
     for vocabularySingle in vocabulary: queueApplication(
       f"""insert
         into favorite_vocab
